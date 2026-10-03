@@ -1,0 +1,25 @@
+# Every host sits in an OS group (linux/windows) and, through nesting, a role group.
+# Linux boxes: paste the YAML entry stager.sh prints under the right role's hosts:
+# (the hosts: lines need to stay; an empty one is fine).
+all:
+  children:
+    linux:
+      children:
+        ecomm:
+          hosts:
+        webmail:
+          hosts:
+        splunk:
+          hosts:
+        wkst:
+          hosts:
+    windows:
+      children:
+        dns_ntp:
+          hosts:
+        web:
+          hosts:
+        ftp:
+          hosts:
+        win_wkst:
+          hosts:
