@@ -1,25 +1,59 @@
 # Every host sits in an OS group (linux/windows) and, through nesting, a role group.
-# Linux boxes: paste the YAML entry stager.sh prints under the right role's hosts:
-# (the hosts: lines need to stay; an empty one is fine).
+# NOTE: Current addresses are TEMPLATES from the internal IPs from the 2026 MWCCDC
+# team packet topology table.
+#
+#   Firewall 1  172.20.242.0/24  Linux boxes + the controller
+#   Firewall 2  172.20.240.0/24  Windows boxes (reached through VyOS, needs WinRM allowed)
+#
+# Host names must not match a group name.
 all:
   children:
     linux:
       children:
         ecomm:
           hosts:
+            # Ubuntu Server 24.04.3, public 172.25.20+team#.11
+            ubuntu-ecomm:
+              ansible_host: 172.20.242.30
+              ansible_python_interpreter: /usr/bin/python3
         webmail:
           hosts:
+            # Fedora 42, public 172.25.20+team#.39
+            fedora-webmail:
+              ansible_host: 172.20.242.40
+              ansible_python_interpreter: /usr/bin/python3
         splunk:
           hosts:
+            # Oracle Linux 9.2 + Splunk 10.0.2, public 172.25.20+team#.9
+            oracle-splunk:
+              ansible_host: 172.20.242.20
+              ansible_python_interpreter: /usr/bin/python3
         wkst:
           hosts:
+            # Ubuntu Desktop 24.04.3, the controller. Its own IP is DHCP, so it
+            # manages itself over SSH on loopback.
+            ubuntu-wkst:
+              ansible_host: 127.0.0.1
+              ansible_python_interpreter: /usr/bin/python3
     windows:
       children:
         dns_ntp:
           hosts:
+            # Server 2019 Std, AD/DNS domain controller, public 172.25.20+team#.155
+            win2019-dc:
+              ansible_host: 172.20.240.102
         web:
           hosts:
+            # Server 2019 Std, public 172.25.20+team#.140
+            win2019-web:
+              ansible_host: 172.20.240.101
         ftp:
           hosts:
+            # Server 2022 Std, public 172.25.20+team#.162
+            win2022-ftp:
+              ansible_host: 172.20.240.104
         win_wkst:
           hosts:
+            # Windows 11 24H2, public 172.25.20+team#.144
+            win11-wkst:
+              ansible_host: 172.20.240.100

@@ -1,0 +1,9 @@
+# How to reach the Windows boxes: WinRM as the 'ansible' admin account.
+# The password is prompted at run time (-k), never stored here.
+# NTLM over HTTP 5985 works with the default WinRM listener (no certificate needed)
+# and still encrypts the payload. Controller needs: pip install pywinrm
+ansible_connection: winrm
+ansible_user: ansible
+ansible_port: 5985
+ansible_winrm_scheme: http
+ansible_winrm_transport: ntlm

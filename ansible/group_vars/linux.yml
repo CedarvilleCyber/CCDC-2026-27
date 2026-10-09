@@ -1,0 +1,6 @@
+# How to reach the Linux boxes: SSH as the user stager.sh creates, sudo with a password.
+# Passwords are prompted at run time (-k ssh, -K sudo), never stored here.
+ansible_connection: ssh
+ansible_user: ansible
+ansible_become: true
+ansible_become_method: sudo
