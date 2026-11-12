@@ -24,6 +24,20 @@ still executes its own tasks in the order shown above.
 
 ## One-time setup
 
+Run [`stager.sh`](stager.sh) on the Ubuntu controller first. It installs the
+controller prerequisites, creates an isolated Python environment with current
+Ansible and `pypsrp`, installs the collections from
+[`requirements.yml`](requirements.yml), and creates the encrypted
+`group_vars/all/vault.yml` containing `vault_ansible_password`. The remote
+password and the vault encryption password are entered without echo and never
+appear in command arguments. Use `--update-vault` only when rotating the
+stored remote password; use `--check` for an audit-only run.
+
+```bash
+bash ./stager.sh
+source .venv/bin/activate
+```
+
 The Linux systems must first be prepared with
 [`linux/stager.sh`](../linux/stager.sh). It creates the `ansible` user, Python,
 password-required sudo, and SSH password access. The Windows systems already
@@ -41,15 +55,6 @@ The bootstrap is safe to rerun: existing passwords are preserved, group
 membership and PSRP configuration are repaired if needed, and no password
 prompt appears unless the account is missing. Use `-ResetPassword` when a
 password rotation is intentional.
-
-Create and encrypt the shared-password vault before running:
-
-```bash
-cp group_vars/all/vault.yml.example group_vars/all/vault.yml
-$EDITOR group_vars/all/vault.yml
-ansible-vault encrypt group_vars/all/vault.yml
-ansible-galaxy collection install -r requirements.yml
-```
 
 Replace `REPLACE_WITH_WINDOWS_11_WKST_DHCP_IP` in
 [`host_vars/win11-wkst.yml`](host_vars/win11-wkst.yml) after DHCP assigns that
