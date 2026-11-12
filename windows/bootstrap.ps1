@@ -189,16 +189,16 @@ function Ensure-LocalAccount {
         New-LocalUser -Name $AccountName `
             -Password $Password `
             -Description 'CCDC Ansible automation account' `
-            -PasswordNeverExpires -AccountNeverExpires | Out-Null
+            -PasswordNeverExpires:$true -AccountNeverExpires:$true | Out-Null
         Write-Status OK "Created local user '$AccountName'."
     }
     else {
         if ($null -ne $Password) {
-            Set-LocalUser -Name $AccountName -Password $Password -PasswordNeverExpires
+            Set-LocalUser -Name $AccountName -Password $Password -PasswordNeverExpires $true
             Write-Status OK "Updated the password for local user '$AccountName'."
         }
         else {
-            Set-LocalUser -Name $AccountName -PasswordNeverExpires
+            Set-LocalUser -Name $AccountName -PasswordNeverExpires $true
         }
         Enable-LocalUser -Name $AccountName
         Write-Status OK "Verified and enabled local user '$AccountName'."
