@@ -1,0 +1,28 @@
+---
+- name: Disable known unnecessary Windows services without touching scored roles
+  ansible.windows.win_shell: |
+    $changed = $false
+    $names = ConvertFrom-Json '{{ windows_disabled_services | to_json }}'
+    foreach ($name in $names) {
+      $service = Get-Service -Name $name -ErrorAction SilentlyContinue
+      if ($null -ne $service) {
+        if ($service.Status -ne 'Stopped') {
+          Stop-Service -Name $name -Force -ErrorAction SilentlyContinue
+          $changed = $true
+        }
+        $cim = Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue
+        if ($null -ne $cim -and $cim.StartMode -ne 'Disabled') {
+          Set-Service -Name $name -StartupType Disabled
+          $changed = $true
+        }
+      }
+    }
+    if ($changed) { 'CHANGED' } else { 'OK' }
+  register: windows_service_result
+  changed_when: "'CHANGED' in windows_service_result.stdout"
+
+- name: Confirm WinRM remains available after service hardening
+  ansible.windows.win_service:
+    name: WinRM
+    state: started
+    start_mode: auto

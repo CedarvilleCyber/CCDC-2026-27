@@ -1,0 +1,7 @@
+---
+linux_firewall_allowed_tcp: [22, 25, 80, 110, 143, 443, 465, 587, 993, 995]
+linux_firewall_allowed_udp: []
+linux_required_services:
+  - postfix
+  - dovecot
+  - apache2

@@ -1,0 +1,7 @@
+---
+ansible_host: 172.20.240.10
+ansible_python_interpreter: /usr/bin/python3
+linux_sshd_service: sshd
+linux_chrony_config: /etc/chrony.conf
+linux_chrony_service: chronyd
+ccdc_public_ip: 172.25.21.10

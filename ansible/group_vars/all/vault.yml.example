@@ -1,0 +1,4 @@
+---
+# Copy this file to vault.yml, replace the value, then encrypt it:
+#   ansible-vault encrypt group_vars/all/vault.yml
+vault_ansible_password: REPLACE_WITH_THE_SHARED_ANSIBLE_PASSWORD

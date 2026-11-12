@@ -107,7 +107,7 @@ prompted), give it sudo (password required) and let it SSH in with a password.
 
   -c, --check         audit only: change nothing, exit 1 if not ready
   -u, --user <name>   username to set up (default: ansible)
-  -r, --role <group>  inventory role group, e.g. webmail (default: guessed
+  -r, --role <group>  inventory role group, e.g. email (default: guessed
                       from the OS, confirmed at a prompt)
   -h, --help          show this help
 
@@ -887,17 +887,18 @@ do_firewall() {
 # Group names: Ansible warns about (and may rewrite) hyphens, so none allowed
 valid_role() { [[ $1 =~ ^[a-z][a-z0-9_]*$ ]]; }
 
-# guess_role: role group from the OS, per the 2026 team packet topology
+# guess_role: role group from the OS, per the 2026 Midwest Invitational packet
 guess_role() {
     case ${ID:-} in
-        fedora) echo webmail ;;
-        ol)     echo splunk ;;
+        rocky|rhel|centos) echo ecomm ;;
+        debian) echo splunk ;;
+        kali)   echo kali ;;
         ubuntu)
             if compgen -G '/usr/share/xsessions/*' >/dev/null || compgen -G '/usr/share/wayland-sessions/*' >/dev/null
             then
                 echo wkst
             else
-                echo ecomm
+                echo email
             fi ;;
     esac
 }
@@ -919,7 +920,7 @@ pick_role() {
         ans=${ans:-$guess}
         if [[ -z $ans ]]
         then
-            warn "a role group is needed for the inventory entry (ecomm, webmail, splunk, wkst, ...)"
+            warn "a role group is needed for the inventory entry (ecomm, email, splunk, wkst, kali, ...)"
         elif valid_role "$ans"
         then
             ROLE=$ans

@@ -1,6 +1,51 @@
-# How to reach the Linux boxes: SSH as the user stager.sh creates, sudo with a password.
-# Passwords are prompted at run time (-k ssh, -K sudo), never stored here.
+---
 ansible_connection: ssh
-ansible_user: ansible
 ansible_become: true
 ansible_become_method: sudo
+ansible_become_password: "{{ vault_ansible_password }}"
+
+linux_sshd_service: ssh
+linux_sshd_config: /etc/ssh/sshd_config
+linux_chrony_config: /etc/chrony/chrony.conf
+linux_chrony_service: chrony
+linux_security_packages:
+  - sudo
+  - openssh-server
+  - chrony
+  - auditd
+  - rsyslog
+
+# Specific services are safer than disabling every service not on an allowlist.
+linux_disabled_services:
+  - avahi-daemon.service
+  - bluetooth.service
+  - cups.service
+  - ModemManager.service
+  - rpcbind.service
+  - rpcbind.socket
+  - rexec.socket
+  - rlogin.socket
+  - rsh.socket
+  - telnet.socket
+
+linux_disabled_timers:
+  - dnf-makecache.timer
+  - unattended-upgrades.timer
+  - phpsessionclean.timer
+
+# High-risk SUID/SGID utilities from the legacy bad-suid list. The role only
+# removes the special bit when the named file is actually present.
+linux_suid_names:
+  - bash
+  - chown
+  - curl
+  - find
+  - nmap
+  - perl
+  - php
+  - python
+  - ruby
+  - wget
+
+linux_firewall_allowed_tcp: [22]
+linux_firewall_allowed_udp: []

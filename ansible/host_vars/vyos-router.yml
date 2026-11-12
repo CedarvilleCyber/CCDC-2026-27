@@ -1,0 +1,6 @@
+---
+# Topology reference only; this host is not in managed_endpoints yet.
+ansible_host: 172.17.0.1
+vyos_workstation_network: 172.17.0.0/24
+vyos_internal_ip: 172.16.0.254
+vyos_external_ip: 172.31.21.2/29

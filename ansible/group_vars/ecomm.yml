@@ -1,0 +1,7 @@
+---
+linux_firewall_allowed_tcp: [22, 80, 443]
+linux_firewall_allowed_udp: []
+linux_required_services:
+  - apache2
+  - httpd
+linux_php_ini_files: []

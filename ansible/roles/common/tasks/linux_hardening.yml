@@ -1,0 +1,139 @@
+---
+- name: Restrict sensitive Linux file permissions
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: root
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /etc/passwd, group: root, mode: '0644' }
+    - { path: /etc/shadow, group: shadow, mode: '0640' }
+    - { path: /etc/sudoers, group: root, mode: '0440' }
+  failed_when: false
+
+- name: Remove dangerous environment injection exports from global profiles
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    regexp: '^\s*(export\s+)?(LD_PRELOAD|LD_LIBRARY_PATH|http_proxy|https_proxy|HTTP_PROXY|HTTPS_PROXY)='
+    state: absent
+    backup: true
+  loop:
+    - /etc/profile
+    - /etc/environment
+  failed_when: false
+
+- name: Gather service facts for safe service changes
+  ansible.builtin.service_facts:
+
+- name: Disable known unnecessary or dangerous Linux services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop: "{{ linux_disabled_services }}"
+  when: item in ansible_facts.services
+
+- name: Stop unattended package automation when the competition setting requests it
+  ansible.builtin.service:
+    name: unattended-upgrades
+    state: stopped
+    enabled: false
+  when:
+    - linux_disable_unattended_upgrades | bool
+    - "'unattended-upgrades.service' in ansible_facts.services"
+
+- name: Disable unattended-upgrades timer when present
+  ansible.builtin.systemd:
+    name: unattended-upgrades.timer
+    state: stopped
+    enabled: false
+    masked: true
+  when:
+    - linux_disable_unattended_upgrades | bool
+    - "'unattended-upgrades.timer' in ansible_facts.services"
+
+- name: Disable nonessential timers only when explicitly enabled
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop: "{{ linux_disabled_timers }}"
+  when:
+    - linux_disable_timers | bool
+    - item in ansible_facts.services
+
+- name: Ensure audit logging is enabled
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+  when: "'auditd.service' in ansible_facts.services or 'auditd' in ansible_facts.services"
+  notify: restart auditd
+
+- name: Ensure system logging is enabled
+  ansible.builtin.service:
+    name: rsyslog
+    state: started
+    enabled: true
+  when: "'rsyslog.service' in ansible_facts.services or 'rsyslog' in ansible_facts.services"
+
+- name: Check for chrony configuration
+  ansible.builtin.stat:
+    path: "{{ linux_chrony_config }}"
+  register: chrony_config_stat
+
+- name: Add competition-supplied NTP sources without guessing one
+  ansible.builtin.blockinfile:
+    path: "{{ linux_chrony_config }}"
+    marker: '# {mark} CCDC NTP SOURCES'
+    block: |
+      {% for server in linux_ntp_servers %}
+      server {{ server }} iburst
+      {% endfor %}
+  when:
+    - chrony_config_stat.stat.exists
+    - linux_ntp_servers | length > 0
+  notify: Restart chrony
+
+- name: Start and enable chrony when installed
+  ansible.builtin.service:
+    name: "{{ linux_chrony_service }}"
+    state: started
+    enabled: true
+  when: "linux_chrony_service in ansible_facts.services or linux_chrony_service + '.service' in ansible_facts.services"
+
+- name: Remove selected legacy SUID and SGID bits
+  ansible.builtin.shell: |
+    changed=0
+    for name in {{ linux_suid_names | map('quote') | join(' ') }}; do
+      while IFS= read -r path; do
+        chmod a-s "$path"
+        changed=1
+      done < <(find /usr/bin /usr/sbin /bin /sbin -xdev -type f -name "$name" -perm /6000 2>/dev/null)
+    done
+    if [ "$changed" -eq 1 ]; then echo CHANGED; else echo OK; fi
+  args:
+    executable: /bin/bash
+  register: suid_cleanup
+  changed_when: "'CHANGED' in suid_cleanup.stdout"
+  when: linux_suid_names | length > 0
+
+- name: Find non-system interactive accounts for optional account locking
+  ansible.builtin.shell: |
+    awk -F: '$3 >= 1000 && $7 !~ /(nologin|false)$/ {print $1}' /etc/passwd
+  args:
+    executable: /bin/bash
+  register: interactive_accounts
+  changed_when: false
+  when: linux_lock_unlisted_accounts | bool
+
+- name: Optionally lock unlisted interactive accounts
+  ansible.builtin.user:
+    name: "{{ item }}"
+    password_lock: true
+  loop: "{{ interactive_accounts.stdout_lines | default([]) }}"
+  when:
+    - linux_lock_unlisted_accounts | bool
+    - item not in ['root', ansible_user, 'sysadmin']

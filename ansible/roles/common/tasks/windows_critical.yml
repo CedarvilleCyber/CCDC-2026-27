@@ -1,0 +1,89 @@
+---
+- name: Create the Windows rollback directory
+  ansible.windows.win_file:
+    path: C:\CCDC-Backup
+    state: directory
+
+- name: Export the current Windows firewall policy
+  ansible.windows.win_shell: |
+    $path = 'C:\CCDC-Backup\firewall-before.wfw'
+    if (-not (Test-Path $path)) { netsh advfirewall export $path | Out-Null }
+  changed_when: false
+
+- name: Ensure the shared Ansible account is a local administrator
+  ansible.windows.win_user:
+    name: "{{ ansible_user }}"
+    password: "{{ vault_ansible_password }}"
+    groups: "{{ windows_ansible_user_groups }}"
+    groups_action: replace
+    state: present
+    password_never_expires: true
+    account_disabled: false
+  no_log: true
+  when: windows_manage_ansible_user | bool
+
+- name: Enable Windows Firewall and block unsolicited inbound traffic
+  ansible.windows.win_shell: |
+    Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled True -DefaultInboundAction Block -DefaultOutboundAction Allow -NotifyOnListen False -LogAllowed True -LogBlocked True -LogFileName '{{ windows_firewall_log_path }}' -LogMaxSizeKilobytes {{ windows_firewall_log_size_kb }}
+  changed_when: false
+
+- name: Allow the WinRM management port
+  ansible.windows.win_firewall_rule:
+    name: CCDC - Allow WinRM HTTP
+    localport: 5985
+    protocol: TCP
+    direction: In
+    action: Allow
+    enabled: true
+    state: present
+    profiles:
+      - Domain
+      - Private
+      - Public
+
+- name: Allow scored TCP services
+  ansible.windows.win_firewall_rule:
+    name: "CCDC - Allow TCP {{ item }}"
+    localport: "{{ item }}"
+    protocol: TCP
+    direction: In
+    action: Allow
+    enabled: true
+    state: present
+    profiles:
+      - Domain
+      - Private
+      - Public
+  loop: "{{ windows_firewall_tcp_ports }}"
+
+- name: Allow scored UDP services
+  ansible.windows.win_firewall_rule:
+    name: "CCDC - Allow UDP {{ item }}"
+    localport: "{{ item }}"
+    protocol: UDP
+    direction: In
+    action: Allow
+    enabled: true
+    state: present
+    profiles:
+      - Domain
+      - Private
+      - Public
+  loop: "{{ windows_firewall_udp_ports }}"
+
+- name: Block common LOLBin outbound TCP connections
+  ansible.windows.win_firewall_rule:
+    name: "CCDC - Block outbound LOLBin {{ blocked_program_index }}"
+    program: "{{ item }}"
+    protocol: TCP
+    direction: Out
+    action: Block
+    enabled: true
+    state: present
+    profiles:
+      - Domain
+      - Private
+      - Public
+  loop: "{{ windows_blocked_programs }}"
+  loop_control:
+    index_var: blocked_program_index

@@ -1,0 +1,5 @@
+---
+# Topology reference only; this host is not in managed_endpoints yet.
+ansible_host: 172.20.240.200
+palo_alto_inside_ip: 172.20.240.254
+palo_alto_outside_ip: 172.16.0.1

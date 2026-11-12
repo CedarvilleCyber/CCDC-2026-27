@@ -1,0 +1,66 @@
+---
+# Run from this directory with:
+#   ansible-playbook site.yml --ask-vault-pass
+#
+# Every managed endpoint participates in each phase together. strategy=free
+# and forks=50 are set in ansible.cfg; task order remains ordered per host.
+
+- name: Phase 0 | discover reachable managed endpoints
+  hosts: managed_endpoints
+  gather_facts: false
+  become: false
+  strategy: free
+  pre_tasks:
+    - name: Leave the not-yet-addressed Windows 11 workstation untouched
+      ansible.builtin.meta: end_host
+      when:
+        - inventory_hostname == 'win11-wkst'
+        - ansible_host == windows11_wkst_ip_placeholder
+
+    - name: Gather facts after placeholder filtering
+      ansible.builtin.setup:
+
+- name: Phase 1 | immediate high-value protections
+  hosts: managed_endpoints
+  gather_facts: false
+  strategy: free
+  pre_tasks:
+    - name: Leave the not-yet-addressed Windows 11 workstation untouched
+      ansible.builtin.meta: end_host
+      when:
+        - inventory_hostname == 'win11-wkst'
+        - ansible_host == windows11_wkst_ip_placeholder
+  roles:
+    - role: common
+      vars:
+        common_phase: critical
+
+- name: Phase 2 | operating-system hardening
+  hosts: managed_endpoints
+  gather_facts: false
+  strategy: free
+  pre_tasks:
+    - name: Leave the not-yet-addressed Windows 11 workstation untouched
+      ansible.builtin.meta: end_host
+      when:
+        - inventory_hostname == 'win11-wkst'
+        - ansible_host == windows11_wkst_ip_placeholder
+  roles:
+    - role: common
+      vars:
+        common_phase: hardening
+
+- name: Phase 3 | service-aware cleanup and availability checks
+  hosts: managed_endpoints
+  gather_facts: false
+  strategy: free
+  pre_tasks:
+    - name: Leave the not-yet-addressed Windows 11 workstation untouched
+      ansible.builtin.meta: end_host
+      when:
+        - inventory_hostname == 'win11-wkst'
+        - ansible_host == windows11_wkst_ip_placeholder
+  roles:
+    - role: common
+      vars:
+        common_phase: services

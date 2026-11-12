@@ -1,9 +1,47 @@
-# How to reach the Windows boxes: WinRM as the 'ansible' admin account.
-# The password is prompted at run time (-k), never stored here.
-# NTLM over HTTP 5985 works with the default WinRM listener (no certificate needed)
-# and still encrypts the payload. Controller needs: pip install pywinrm
-ansible_connection: winrm
+---
+ansible_connection: psrp
 ansible_user: ansible
+ansible_password: "{{ vault_ansible_password }}"
 ansible_port: 5985
-ansible_winrm_scheme: http
-ansible_winrm_transport: ntlm
+ansible_psrp_protocol: http
+ansible_psrp_auth: ntlm
+ansible_psrp_cert_validation: ignore
+
+# Bootstrap establishes this account and its password before Ansible connects.
+# Leave password rotation to windows/bootstrap.ps1 so the domain controller is
+# handled correctly as well as member servers and clients.
+windows_manage_ansible_user: false
+windows_ansible_user_groups:
+  - Administrators
+windows_disable_smb1: true
+windows_enable_defender: true
+windows_disable_rdp: false
+windows_password_min_length: 8
+windows_password_max_age: 30
+windows_password_min_age: 1
+windows_password_history: 3
+windows_firewall_log_path: C:\Windows\System32\LogFiles\Firewall\pfirewall.log
+windows_firewall_log_size_kb: 8192
+
+# Do not disable a service that is required by a scored role.
+windows_disabled_services:
+  - TlntSvr
+  - RemoteRegistry
+  - SSDPSRV
+  - upnphost
+  - Fax
+  - WerSvc
+  - DiagTrack
+  - MapsBroker
+  - lfsvc
+
+windows_firewall_tcp_ports: [5985]
+windows_firewall_udp_ports: []
+windows_blocked_programs:
+  - C:\Windows\System32\notepad.exe
+  - C:\Windows\System32\regsvr32.exe
+  - C:\Windows\System32\calc.exe
+  - C:\Windows\System32\mshta.exe
+  - C:\Windows\System32\wscript.exe
+  - C:\Windows\System32\cscript.exe
+  - C:\Windows\System32\hh.exe

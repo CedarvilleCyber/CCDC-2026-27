@@ -1,0 +1,3 @@
+---
+windows_firewall_tcp_ports: [1433, 3389, 445, 5985]
+windows_firewall_udp_ports: []

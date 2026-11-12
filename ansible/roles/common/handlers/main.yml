@@ -1,0 +1,24 @@
+---
+- name: Reload SSH daemon
+  ansible.builtin.service:
+    name: "{{ linux_sshd_service }}"
+    state: reloaded
+
+- name: Restart chrony
+  ansible.builtin.service:
+    name: "{{ linux_chrony_service }}"
+    state: restarted
+
+- name: Restart PHP-capable services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ linux_required_services | default([]) }}"
+  when: item in ansible_facts.services or item + '.service' in ansible_facts.services
+
+- name: Restart auditd when supported
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+  listen: restart auditd
+  when: ansible_facts.service_mgr == 'systemd'

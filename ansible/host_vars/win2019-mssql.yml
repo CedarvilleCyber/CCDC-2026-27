@@ -1,0 +1,3 @@
+---
+ansible_host: 172.20.240.120
+ccdc_public_ip: 172.25.21.120

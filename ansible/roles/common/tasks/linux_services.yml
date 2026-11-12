@@ -1,0 +1,26 @@
+---
+- name: Gather service facts for availability-preserving changes
+  ansible.builtin.service_facts:
+
+- name: Keep each role's already-installed scored service running
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop: "{{ linux_required_services | default([]) }}"
+  when:
+    - item in ansible_facts.services or item + '.service' in ansible_facts.services
+  failed_when: false
+
+- name: Harden configured PHP files against common command execution abuse
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    regexp: '^\s*;?\s*disable_functions\s*='
+    line: 'disable_functions = exec, shell_exec, system, passthru, popen, proc_open, pcntl_exec, pcntl_fork, curl_exec, phpinfo, mail, mb_send_mail, dl'
+    backup: true
+  loop: "{{ linux_php_ini_files | default([]) }}"
+  notify: Restart PHP-capable services
+
+- name: Report the service phase completion
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} service hardening completed; scored services were preserved when installed."

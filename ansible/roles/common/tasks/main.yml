@@ -1,1 +1,36 @@
-# roles/ is for task instructions. site.yml references these tasks.
+---
+- name: Linux critical controls
+  ansible.builtin.include_tasks: linux_critical.yml
+  when:
+    - ansible_facts.os_family != 'Windows'
+    - common_phase | default('critical') == 'critical'
+
+- name: Windows critical controls
+  ansible.builtin.include_tasks: windows_critical.yml
+  when:
+    - ansible_facts.os_family == 'Windows'
+    - common_phase | default('critical') == 'critical'
+
+- name: Linux operating-system hardening
+  ansible.builtin.include_tasks: linux_hardening.yml
+  when:
+    - ansible_facts.os_family != 'Windows'
+    - common_phase | default('critical') == 'hardening'
+
+- name: Windows operating-system hardening
+  ansible.builtin.include_tasks: windows_hardening.yml
+  when:
+    - ansible_facts.os_family == 'Windows'
+    - common_phase | default('critical') == 'hardening'
+
+- name: Linux service-aware work
+  ansible.builtin.include_tasks: linux_services.yml
+  when:
+    - ansible_facts.os_family != 'Windows'
+    - common_phase | default('critical') == 'services'
+
+- name: Windows service-aware work
+  ansible.builtin.include_tasks: windows_services.yml
+  when:
+    - ansible_facts.os_family == 'Windows'
+    - common_phase | default('critical') == 'services'

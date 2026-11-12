@@ -1,0 +1,8 @@
+---
+# The controller's competition-network address is DHCP. Loopback keeps the
+# controller manageable through the same SSH path without guessing its lease.
+ansible_host: 127.0.0.1
+ansible_python_interpreter: /usr/bin/python3
+ccdc_controller: true
+ccdc_internal_address: dhcp
+ccdc_public_ip: 172.31.21.2

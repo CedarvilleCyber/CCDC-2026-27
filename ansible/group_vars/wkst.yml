@@ -1,0 +1,8 @@
+---
+linux_firewall_allowed_tcp: [22]
+linux_firewall_allowed_udp: []
+linux_disabled_services:
+  - avahi-daemon.service
+  - bluetooth.service
+  - cups.service
+  - ModemManager.service
