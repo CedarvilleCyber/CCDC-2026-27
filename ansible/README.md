@@ -45,8 +45,10 @@ venv and open a nested interactive shell automatically. Type `exit` to return
 to the original shell.
 
 The stager does not replace Ubuntu's system `/usr/bin/python3`. It selects
-Python 3.11, 3.12, or 3.13 for the controller virtual environment and installs
-a compatible Ansible release there. Always activate `.venv` or invoke
+Python 3.11, 3.12, or 3.13 for the controller virtual environment. It tries
+Ubuntu packages first and automatically enables the Deadsnakes PPA if those
+packages are unavailable. It then installs a compatible Ansible release there.
+Always activate `.venv` or invoke
 `.venv/bin/ansible-playbook`; otherwise Ubuntu's older system Ansible may be
 used.
 

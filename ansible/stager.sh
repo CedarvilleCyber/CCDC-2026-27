@@ -119,13 +119,15 @@ find_supported_python() {
 ensure_controller_python() {
     if ! find_supported_python; then
         status INFO 'Python 3.11+ was not found; trying supported Ubuntu packages'
-        local package
-        for package in python3.13 python3.12 python3.11; do
-            if "${SUDO[@]}" apt-get install -y -q "$package" "${package}-venv"; then
-                break
-            fi
-        done
-        find_supported_python || die 'Python 3.11+ is required. Install Python 3.11, 3.12, or 3.13 and rerun this script.'
+        install_supported_python_packages || {
+            [[ "${ID:-}" == ubuntu ]] || die 'Python 3.11+ is unavailable in the configured repositories. Use Ubuntu or add a trusted Python repository, then rerun this script.'
+            status INFO 'Ubuntu repositories did not provide Python 3.11+; enabling the Deadsnakes PPA'
+            "${SUDO[@]}" apt-get install -y -q software-properties-common
+            "${SUDO[@]}" add-apt-repository -y ppa:deadsnakes/ppa
+            "${SUDO[@]}" apt-get update -qq
+            install_supported_python_packages || die 'Could not install Python 3.11, 3.12, or 3.13 from Ubuntu or Deadsnakes.'
+        }
+        find_supported_python || die 'Python installation completed but no supported interpreter was found.'
     fi
 
     case "$PYTHON_MINOR" in
@@ -134,6 +136,16 @@ ensure_controller_python() {
         *)     die "Unsupported controller Python minor version: $PYTHON_MINOR" ;;
     esac
     status OK "Using controller Python $PYTHON_MINOR at $PYTHON_BIN"
+}
+
+install_supported_python_packages() {
+    local package
+    for package in python3.13 python3.12 python3.11; do
+        if "${SUDO[@]}" apt-get install -y -q "$package" "${package}-venv"; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 setup_virtualenv() {
