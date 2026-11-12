@@ -37,6 +37,11 @@ creates or updates a local account. Install the controller dependency with
 `python3 -m pip install pypsrp`. The packet's initial Windows credentials are
 not copied into this repository.
 
+The bootstrap is safe to rerun: existing passwords are preserved, group
+membership and PSRP configuration are repaired if needed, and no password
+prompt appears unless the account is missing. Use `-ResetPassword` when a
+password rotation is intentional.
+
 Create and encrypt the shared-password vault before running:
 
 ```bash

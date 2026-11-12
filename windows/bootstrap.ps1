@@ -8,12 +8,14 @@
 .DESCRIPTION
     The password is collected as a SecureString from the console. It is not a
     parameter, so it cannot appear in command history, process arguments, or
-    this script's output. Re-running the script updates the existing account
-    and verifies the complete management path.
+    this script's output. The first run prompts for a password when the account
+    is absent. Later runs preserve the existing password unless
+    -ResetPassword is explicitly supplied.
 
     Run from an elevated 64-bit Windows PowerShell 5.1 prompt:
 
       powershell.exe -ExecutionPolicy Bypass -File .\bootstrap.ps1
+      powershell.exe -ExecutionPolicy Bypass -File .\bootstrap.ps1 -ResetPassword
       powershell.exe -ExecutionPolicy Bypass -File .\bootstrap.ps1 -Check
 
     Member servers and Windows clients receive a local administrator named
@@ -30,7 +32,9 @@ param(
     [ValidateRange(8, 128)]
     [int]$MinimumPasswordLength = 8,
 
-    [switch]$Check
+    [switch]$Check,
+
+    [switch]$ResetPassword
 )
 
 Set-StrictMode -Version Latest
@@ -106,6 +110,30 @@ function Get-LocalAdministratorsGroupName {
     return ($account -split '\\', 2)[1]
 }
 
+function Test-SidMembership {
+    param(
+        [AllowEmptyCollection()][object[]]$Members,
+        [Parameter(Mandatory)][string]$Sid
+    )
+
+    foreach ($member in @($Members)) {
+        if ($null -ne $member -and $null -ne $member.SID -and $member.SID.Value -eq $Sid) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Get-LocalAccountTokenFilterPolicy {
+    $path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
+    $key = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue
+    if ($null -eq $key) { return $null }
+
+    $property = $key.PSObject.Properties['LocalAccountTokenFilterPolicy']
+    if ($null -eq $property) { return $null }
+    return [int]$property.Value
+}
+
 function Test-HttpWinRmListener {
     $output = (& winrm.cmd enumerate winrm/config/listener 2>&1 | Out-String)
     return $output -match '(?im)^\s*Transport\s*=\s*HTTP\s*$'
@@ -148,13 +176,16 @@ function Ensure-WinRmAndPsrp {
 function Ensure-LocalAccount {
     param(
         [Parameter(Mandatory)][string]$AccountName,
-        [Parameter(Mandatory)][Security.SecureString]$Password,
+        [AllowNull()][Security.SecureString]$Password,
         [Parameter(Mandatory)][string]$AdministratorsGroup
     )
 
     Import-Module Microsoft.PowerShell.LocalAccounts -ErrorAction Stop
     $user = Get-LocalUser -Name $AccountName -ErrorAction SilentlyContinue
     if ($null -eq $user) {
+        if ($null -eq $Password) {
+            throw "Local user '$AccountName' does not exist and no password was supplied."
+        }
         New-LocalUser -Name $AccountName `
             -Password $Password `
             -Description 'CCDC Ansible automation account' `
@@ -162,14 +193,20 @@ function Ensure-LocalAccount {
         Write-Status OK "Created local user '$AccountName'."
     }
     else {
-        Set-LocalUser -Name $AccountName -Password $Password -PasswordNeverExpires
+        if ($null -ne $Password) {
+            Set-LocalUser -Name $AccountName -Password $Password -PasswordNeverExpires
+            Write-Status OK "Updated the password for local user '$AccountName'."
+        }
+        else {
+            Set-LocalUser -Name $AccountName -PasswordNeverExpires
+        }
         Enable-LocalUser -Name $AccountName
-        Write-Status OK "Updated and enabled local user '$AccountName'."
+        Write-Status OK "Verified and enabled local user '$AccountName'."
     }
 
     $user = Get-LocalUser -Name $AccountName
     $members = @(Get-LocalGroupMember -Group $AdministratorsGroup -ErrorAction SilentlyContinue)
-    if ($members.SID.Value -notcontains $user.SID.Value) {
+    if (-not (Test-SidMembership -Members $members -Sid $user.SID.Value)) {
         Add-LocalGroupMember -Group $AdministratorsGroup -Member $AccountName
         Write-Status OK "Added '$AccountName' to '$AdministratorsGroup'."
     }
@@ -186,13 +223,16 @@ function Ensure-LocalAccount {
 function Ensure-DomainAccount {
     param(
         [Parameter(Mandatory)][string]$AccountName,
-        [Parameter(Mandatory)][Security.SecureString]$Password
+        [AllowNull()][Security.SecureString]$Password
     )
 
     Import-Module ActiveDirectory -ErrorAction Stop
     $domain = Get-ADDomain
     $user = Get-ADUser -Identity $AccountName -ErrorAction SilentlyContinue
     if ($null -eq $user) {
+        if ($null -eq $Password) {
+            throw "Domain user '$AccountName' does not exist and no password was supplied."
+        }
         New-ADUser -Name $AccountName `
             -SamAccountName $AccountName `
             -Path $domain.UsersContainer `
@@ -202,16 +242,19 @@ function Ensure-DomainAccount {
         Write-Status OK "Created domain user '$AccountName'."
     }
     else {
-        Set-ADAccountPassword -Identity $user -Reset -NewPassword $Password
+        if ($null -ne $Password) {
+            Set-ADAccountPassword -Identity $user -Reset -NewPassword $Password
+            Write-Status OK "Updated the password for domain user '$AccountName'."
+        }
         Set-ADUser -Identity $user -Enabled $true -PasswordNeverExpires $true
-        Write-Status OK "Updated and enabled domain user '$AccountName'."
+        Write-Status OK "Verified and enabled domain user '$AccountName'."
     }
 
     $user = Get-ADUser -Identity $AccountName
     # RID 544 is the built-in Administrators group, independent of OS locale.
     $administrators = Get-ADGroup -Identity ($domain.DomainSID.Value + '-544')
     $members = @(Get-ADGroupMember -Identity $administrators -Recursive -ErrorAction SilentlyContinue)
-    if ($members.SID.Value -notcontains $user.SID.Value) {
+    if (-not (Test-SidMembership -Members $members -Sid $user.SID.Value)) {
         Add-ADGroupMember -Identity $administrators -Members $user
         Write-Status OK "Added '$AccountName' to the built-in Administrators group."
     }
@@ -246,7 +289,7 @@ function Get-Readiness {
         $domain = Get-ADDomain
         $admin = Get-ADGroup -Identity ($domain.DomainSID.Value + '-544')
         $members = @(Get-ADGroupMember -Identity $admin -Recursive -ErrorAction SilentlyContinue)
-        if ($null -ne $user -and $members.SID.Value -contains $user.SID.Value) {
+        if ($null -ne $user -and (Test-SidMembership -Members $members -Sid $user.SID.Value)) {
             Write-Status OK "'$AccountName' is in the built-in Administrators group."
         }
         else {
@@ -266,7 +309,7 @@ function Get-Readiness {
 
         if ($null -ne $user) {
             $members = @(Get-LocalGroupMember -Group $AdministratorsGroup -ErrorAction SilentlyContinue)
-            if ($members.SID.Value -contains $user.SID.Value) {
+            if (Test-SidMembership -Members $members -Sid $user.SID.Value) {
                 Write-Status OK "'$AccountName' is a member of '$AdministratorsGroup'."
             }
             else {
@@ -312,7 +355,7 @@ function Get-Readiness {
     }
 
     if (-not $DomainController) {
-        $tokenFilter = (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name LocalAccountTokenFilterPolicy -ErrorAction SilentlyContinue).LocalAccountTokenFilterPolicy
+        $tokenFilter = Get-LocalAccountTokenFilterPolicy
         if ($tokenFilter -eq 1) {
             Write-Status OK 'Local administrator remote token filtering is disabled for PSRP management.'
         }
@@ -355,14 +398,34 @@ try {
     Write-Status INFO ("Target account: {0} ({1})" -f $UserName, $(if ($isDomainController) { 'domain' } else { 'local' }))
 
     if (-not $Check) {
-        $password = Read-AnsiblePassword -MinimumLength $MinimumPasswordLength
+        if ($isDomainController) {
+            $accountExists = $null -ne (Get-ADUser -Identity $UserName -ErrorAction SilentlyContinue)
+        }
+        else {
+            $accountExists = $null -ne (Get-LocalUser -Name $UserName -ErrorAction SilentlyContinue)
+        }
+
+        $needsPassword = (-not $accountExists) -or $ResetPassword
+        if ($needsPassword) {
+            if ($accountExists) {
+                Write-Status INFO "-ResetPassword supplied; accepting a replacement password for '$UserName'."
+            }
+            else {
+                Write-Status INFO "Account '$UserName' does not exist; accepting its initial password."
+            }
+            $password = Read-AnsiblePassword -MinimumLength $MinimumPasswordLength
+        }
+        else {
+            Write-Status OK "Account '$UserName' already exists; preserving its password. Use -ResetPassword to rotate it."
+        }
+
         if ($isDomainController) {
             $context = Ensure-DomainAccount -AccountName $UserName -Password $password
         }
         else {
             $context = Ensure-LocalAccount -AccountName $UserName -Password $password -AdministratorsGroup $administratorsGroup
             $lsaPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
-            $currentTokenFilter = (Get-ItemProperty -Path $lsaPath -Name LocalAccountTokenFilterPolicy -ErrorAction SilentlyContinue).LocalAccountTokenFilterPolicy
+            $currentTokenFilter = Get-LocalAccountTokenFilterPolicy
             if ($currentTokenFilter -ne 1) {
                 New-ItemProperty -Path $lsaPath -Name LocalAccountTokenFilterPolicy -PropertyType DWord -Value 1 -Force | Out-Null
                 Write-Status OK 'Enabled full remote administrative tokens for the local Ansible account.'
