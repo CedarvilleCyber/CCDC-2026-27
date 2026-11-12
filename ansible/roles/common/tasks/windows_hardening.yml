@@ -80,7 +80,8 @@
   ansible.windows.win_regedit:
     path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
     name: "{{ item }}"
-    data: "{{ ccdc_banner }}"
+    data: >-
+      {{ ccdc_banner | default('Warning: Only authorized users are permitted to login. All network activity is being monitored and logged.') }}
     type: string
     state: present
   loop:

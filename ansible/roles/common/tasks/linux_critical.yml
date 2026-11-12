@@ -147,7 +147,7 @@
 
 - name: Install the authorized-use banner
   ansible.builtin.copy:
-    content: "{{ ccdc_banner }}\n"
+    content: "{{ ccdc_banner | default('Warning: Only authorized users are permitted to login. All network activity is being monitored and logged.') }}\n"
     dest: "{{ item }}"
     owner: root
     group: root
@@ -158,7 +158,7 @@
 
 - name: Install SSH banner file
   ansible.builtin.copy:
-    content: "{{ ccdc_banner }}\n"
+    content: "{{ ccdc_banner | default('Warning: Only authorized users are permitted to login. All network activity is being monitored and logged.') }}\n"
     dest: /etc/ssh/sshd-banner
     owner: root
     group: root

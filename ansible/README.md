@@ -36,7 +36,19 @@ stored remote password; use `--check` for an audit-only run.
 ```bash
 bash ./stager.sh
 source .venv/bin/activate
+which ansible-playbook
+ansible-playbook --version
 ```
+
+Alternatively, use `bash ./stager.sh --shell` to have the stager activate the
+venv and open a nested interactive shell automatically. Type `exit` to return
+to the original shell.
+
+The stager does not replace Ubuntu's system `/usr/bin/python3`. It selects
+Python 3.11, 3.12, or 3.13 for the controller virtual environment and installs
+a compatible Ansible release there. Always activate `.venv` or invoke
+`.venv/bin/ansible-playbook`; otherwise Ubuntu's older system Ansible may be
+used.
 
 The Linux systems must first be prepared with
 [`linux/stager.sh`](../linux/stager.sh). It creates the `ansible` user, Python,
@@ -60,6 +72,22 @@ Replace `REPLACE_WITH_WINDOWS_11_WKST_DHCP_IP` in
 [`host_vars/win11-wkst.yml`](host_vars/win11-wkst.yml) after DHCP assigns that
 workstation before running the playbook. Ansible does not inspect, resolve, or
 skip the placeholder automatically.
+
+## Variables to review
+
+The stager creates the required encrypted
+[`group_vars/all/vault.yml`](group_vars/all/vault.yml) containing
+`vault_ansible_password`. The remaining user-editable values are:
+
+- `host_vars/win11-wkst.yml`: replace the DHCP placeholder in `ansible_host`.
+- `group_vars/all.yml`: customize `ccdc_banner` if needed and set
+  `linux_ntp_servers` if the competition supplies a private NTP source.
+- `group_vars/windows.yml`: change PSRP protocol, authentication, or port only
+  if the Windows listener is configured differently from HTTP/NTLM/5985.
+- `group_vars/ecomm.yml`: populate `linux_php_ini_files` if PHP hardening should
+  be applied to known PHP configuration files.
+- [`group_vars/customization.yml.example`](group_vars/customization.yml.example):
+  optional copyable placeholders for those overrides.
 
 ## Run
 

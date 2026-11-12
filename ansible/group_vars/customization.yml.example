@@ -1,0 +1,19 @@
+---
+# Optional local overrides. Copy individual values into the applicable
+# group_vars/*.yml or host_vars/*.yml file; this .example file is not loaded.
+
+# Optional competition-specific authorized-use notice:
+# ccdc_banner: REPLACE_WITH_APPROVED_LOGIN_BANNER
+
+# Optional private NTP source(s):
+# linux_ntp_servers:
+#   - REPLACE_WITH_NTP_SERVER_IP
+
+# Optional PHP configuration files for the Ecomm host:
+# linux_php_ini_files:
+#   - REPLACE_WITH_PHP_INI_PATH
+
+# Only change these if the Windows PSRP listener differs from the packet setup:
+# ansible_port: 5985
+# ansible_psrp_protocol: http
+# ansible_psrp_auth: ntlm

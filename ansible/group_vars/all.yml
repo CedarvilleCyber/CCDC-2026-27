@@ -4,14 +4,16 @@
 ansible_user: ansible
 ansible_password: "{{ vault_ansible_password }}"
 
+# User-editable competition settings. The banner has a safe default; customize
+# it here if the competition supplies a different authorized-use notice.
 ccdc_team_number: 1
 ccdc_banner: >-
   Warning: Only authorized users are permitted to login. All network activity
   is being monitored and logged, and may be used to investigate and prosecute
   any instance of unauthorized access.
 
-# Do not guess a private NTP server. Set this when the competition supplies
-# one; an empty list leaves the distribution's current sources in place.
+# Optional: set this when the competition supplies a private NTP server. An
+# empty list leaves each distribution's current time sources in place.
 linux_ntp_servers: []
 linux_create_backups: true
 linux_upgrade_packages: true
