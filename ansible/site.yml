@@ -10,26 +10,14 @@
   gather_facts: false
   become: false
   strategy: free
-  pre_tasks:
-    - name: Leave the not-yet-addressed Windows 11 workstation untouched
-      ansible.builtin.meta: end_host
-      when:
-        - inventory_hostname == 'win11-wkst'
-        - ansible_host == windows11_wkst_ip_placeholder
-
-    - name: Gather facts after placeholder filtering
+  tasks:
+    - name: Gather facts for managed endpoints
       ansible.builtin.setup:
 
 - name: Phase 1 | immediate high-value protections
   hosts: managed_endpoints
   gather_facts: false
   strategy: free
-  pre_tasks:
-    - name: Leave the not-yet-addressed Windows 11 workstation untouched
-      ansible.builtin.meta: end_host
-      when:
-        - inventory_hostname == 'win11-wkst'
-        - ansible_host == windows11_wkst_ip_placeholder
   roles:
     - role: common
       vars:
@@ -39,12 +27,6 @@
   hosts: managed_endpoints
   gather_facts: false
   strategy: free
-  pre_tasks:
-    - name: Leave the not-yet-addressed Windows 11 workstation untouched
-      ansible.builtin.meta: end_host
-      when:
-        - inventory_hostname == 'win11-wkst'
-        - ansible_host == windows11_wkst_ip_placeholder
   roles:
     - role: common
       vars:
@@ -54,12 +36,6 @@
   hosts: managed_endpoints
   gather_facts: false
   strategy: free
-  pre_tasks:
-    - name: Leave the not-yet-addressed Windows 11 workstation untouched
-      ansible.builtin.meta: end_host
-      when:
-        - inventory_hostname == 'win11-wkst'
-        - ansible_host == windows11_wkst_ip_placeholder
   roles:
     - role: common
       vars:

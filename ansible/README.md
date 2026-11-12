@@ -53,8 +53,8 @@ ansible-galaxy collection install -r requirements.yml
 
 Replace `REPLACE_WITH_WINDOWS_11_WKST_DHCP_IP` in
 [`host_vars/win11-wkst.yml`](host_vars/win11-wkst.yml) after DHCP assigns that
-workstation. Until then, the playbook safely ends that host before opening a
-connection and continues with the other systems.
+workstation before running the playbook. Ansible does not inspect, resolve, or
+skip the placeholder automatically.
 
 ## Run
 

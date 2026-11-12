@@ -3,4 +3,3 @@
 ansible_host: REPLACE_WITH_WINDOWS_11_WKST_DHCP_IP
 ccdc_internal_address: dhcp
 ccdc_public_ip: 172.31.21.2
-windows11_wkst_pending: true

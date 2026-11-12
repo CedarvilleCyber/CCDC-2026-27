@@ -18,5 +18,3 @@ linux_upgrade_packages: true
 linux_disable_unattended_upgrades: true
 linux_lock_unlisted_accounts: false
 linux_disable_timers: false
-
-windows11_wkst_ip_placeholder: REPLACE_WITH_WINDOWS_11_WKST_DHCP_IP
