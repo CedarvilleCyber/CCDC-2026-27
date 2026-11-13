@@ -10,6 +10,8 @@
   gather_facts: false
   become: false
   strategy: free
+  any_errors_fatal: false
+  force_handlers: true
   tasks:
     - name: Gather facts for managed endpoints
       ansible.builtin.setup:
@@ -18,6 +20,8 @@
   hosts: managed_endpoints
   gather_facts: false
   strategy: free
+  any_errors_fatal: false
+  force_handlers: true
   roles:
     - role: common
       vars:
@@ -27,6 +31,8 @@
   hosts: managed_endpoints
   gather_facts: false
   strategy: free
+  any_errors_fatal: false
+  force_handlers: true
   roles:
     - role: common
       vars:
@@ -36,6 +42,8 @@
   hosts: managed_endpoints
   gather_facts: false
   strategy: free
+  any_errors_fatal: false
+  force_handlers: true
   roles:
     - role: common
       vars:

@@ -13,6 +13,8 @@ This reference describes the controls performed by the common role on Linux and 
 
 The plays use strategy free and the controller uses 50 forks. A host's tasks remain ordered, but one slow host does not serialize the others.
 
+The site also sets any_errors_fatal to false and force_handlers to true. Package updates and individual Linux prerequisite packages are best-effort: a failed package operation is reported and ignored so later hardening can continue. Each role phase has a rescue boundary so an unexpected task failure in one phase does not prevent later phases from running on that host. An unreachable host cannot be repaired until connectivity is restored.
+
 ## Linux hardening
 
 Linux controls are implemented in [linux_critical.yml](./roles/common/tasks/linux_critical.yml), [linux_hardening.yml](./roles/common/tasks/linux_hardening.yml), and [linux_services.yml](./roles/common/tasks/linux_services.yml).

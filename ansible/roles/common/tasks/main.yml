@@ -1,36 +1,84 @@
 ---
 - name: Linux critical controls
-  ansible.builtin.include_tasks: linux_critical.yml
+  block:
+    - name: Apply Linux critical task list
+      ansible.builtin.include_tasks: linux_critical.yml
+  rescue:
+    - name: Continue after a Linux critical-control failure
+      ansible.builtin.debug:
+        msg: >-
+          Linux critical controls encountered a failure on {{ inventory_hostname }};
+          continuing with later hardening phases.
   when:
     - ansible_facts.os_family != 'Windows'
     - common_phase | default('critical') == 'critical'
 
 - name: Windows critical controls
-  ansible.builtin.include_tasks: windows_critical.yml
+  block:
+    - name: Apply Windows critical task list
+      ansible.builtin.include_tasks: windows_critical.yml
+  rescue:
+    - name: Continue after a Windows critical-control failure
+      ansible.builtin.debug:
+        msg: >-
+          Windows critical controls encountered a failure on {{ inventory_hostname }};
+          continuing with later hardening phases.
   when:
     - ansible_facts.os_family == 'Windows'
     - common_phase | default('critical') == 'critical'
 
 - name: Linux operating-system hardening
-  ansible.builtin.include_tasks: linux_hardening.yml
+  block:
+    - name: Apply Linux operating-system hardening task list
+      ansible.builtin.include_tasks: linux_hardening.yml
+  rescue:
+    - name: Continue after a Linux operating-system hardening failure
+      ansible.builtin.debug:
+        msg: >-
+          Linux operating-system hardening encountered a failure on {{ inventory_hostname }};
+          continuing with service-aware work.
   when:
     - ansible_facts.os_family != 'Windows'
     - common_phase | default('critical') == 'hardening'
 
 - name: Windows operating-system hardening
-  ansible.builtin.include_tasks: windows_hardening.yml
+  block:
+    - name: Apply Windows operating-system hardening task list
+      ansible.builtin.include_tasks: windows_hardening.yml
+  rescue:
+    - name: Continue after a Windows operating-system hardening failure
+      ansible.builtin.debug:
+        msg: >-
+          Windows operating-system hardening encountered a failure on {{ inventory_hostname }};
+          continuing with service-aware work.
   when:
     - ansible_facts.os_family == 'Windows'
     - common_phase | default('critical') == 'hardening'
 
 - name: Linux service-aware work
-  ansible.builtin.include_tasks: linux_services.yml
+  block:
+    - name: Apply Linux service-aware task list
+      ansible.builtin.include_tasks: linux_services.yml
+  rescue:
+    - name: Continue after a Linux service-aware failure
+      ansible.builtin.debug:
+        msg: >-
+          Linux service-aware work encountered a failure on {{ inventory_hostname }};
+          earlier hardening changes remain applied.
   when:
     - ansible_facts.os_family != 'Windows'
     - common_phase | default('critical') == 'services'
 
 - name: Windows service-aware work
-  ansible.builtin.include_tasks: windows_services.yml
+  block:
+    - name: Apply Windows service-aware task list
+      ansible.builtin.include_tasks: windows_services.yml
+  rescue:
+    - name: Continue after a Windows service-aware failure
+      ansible.builtin.debug:
+        msg: >-
+          Windows service-aware work encountered a failure on {{ inventory_hostname }};
+          earlier hardening changes remain applied.
   when:
     - ansible_facts.os_family == 'Windows'
     - common_phase | default('critical') == 'services'
