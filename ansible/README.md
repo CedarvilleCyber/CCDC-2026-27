@@ -82,7 +82,7 @@ The stager creates the required encrypted
 `vault_ansible_password`. The remaining user-editable values are:
 
 - `host_vars/win11-wkst.yml`: replace the DHCP placeholder in `ansible_host`.
-- `group_vars/all.yml`: customize `ccdc_banner` if needed and set
+- `group_vars/all/main.yml`: customize `ccdc_banner` if needed and set
   `linux_ntp_servers` if the competition supplies a private NTP source.
 - `group_vars/windows.yml`: change PSRP protocol, authentication, or port only
   if the Windows listener is configured differently from HTTP/NTLM/5985.
@@ -102,7 +102,7 @@ ansible-playbook site.yml --ask-vault-pass
 ```
 
 If the team changes the supplied NTP service, set `linux_ntp_servers` in
-[`group_vars/all.yml`](group_vars/all.yml) or a more-specific group/host vars
+[`group_vars/all/main.yml`](group_vars/all/main.yml) or a more-specific group/host vars
 file. The playbook does not invent a private NTP address.
 
 The playbook keeps public/scored service ports open per role, preserves the
