@@ -5,6 +5,10 @@
 all:
   children:
     managed_endpoints:
+      vars:
+        # Connection identity belongs to the inventory so every Ansible CLI
+        # and playbook invocation uses the staged account explicitly.
+        ansible_user: ansible
       children:
         linux:
           children:

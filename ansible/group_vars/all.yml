@@ -1,7 +1,6 @@
 ---
 # The real value is supplied by group_vars/all/vault.yml. Do not put a
 # password in this file or in inventory.yml.
-ansible_user: ansible
 ansible_password: "{{ vault_ansible_password }}"
 
 # User-editable competition settings. The banner has a safe default; customize

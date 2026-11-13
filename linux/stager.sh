@@ -14,12 +14,11 @@
 # Every step checks the live, effective state first and only changes what is
 # actually wrong, so it is safe to re-run. It ends with a readiness report
 # built from fresh checks plus an inventory entry (YAML) to paste into
-# inventory.yml on the controller, under linux > children > <role> > hosts.
+# inventory.yml on the controller, under the appropriate Linux role group.
 #
 #   sudo ./stager.sh                  set up this box (interactive)
 #   sudo ./stager.sh --check          audit only, change nothing
 #   sudo ./stager.sh --user <name>    set up a different username
-#   sudo ./stager.sh --role <group>   inventory role group (default: guessed from the OS)
 #   curl -sL <raw url> | sudo bash    also works, prompts read from /dev/tty
 #
 # Oct. 2026
@@ -29,7 +28,6 @@ export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 umask 077
 
 ANSIBLE_USER="ansible"
-ROLE=""
 CHECK_ONLY=0
 MIN_PW_LEN=8
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -107,8 +105,6 @@ prompted), give it sudo (password required) and let it SSH in with a password.
 
   -c, --check         audit only: change nothing, exit 1 if not ready
   -u, --user <name>   username to set up (default: ansible)
-  -r, --role <group>  inventory role group, e.g. email (default: guessed
-                      from the OS, confirmed at a prompt)
   -h, --help          show this help
 
 There is deliberately no --password option. The password is only ever read
@@ -882,56 +878,6 @@ do_firewall() {
 }
 
 
-# ------------------------------------------------------------------ role ----
-
-# Group names: Ansible warns about (and may rewrite) hyphens, so none allowed
-valid_role() { [[ $1 =~ ^[a-z][a-z0-9_]*$ ]]; }
-
-# guess_role: role group from the OS, per the 2026 Midwest Invitational packet
-guess_role() {
-    case ${ID:-} in
-        rocky|rhel|centos) echo ecomm ;;
-        debian) echo splunk ;;
-        kali)   echo kali ;;
-        ubuntu)
-            if compgen -G '/usr/share/xsessions/*' >/dev/null || compgen -G '/usr/share/wayland-sessions/*' >/dev/null
-            then
-                echo wkst
-            else
-                echo email
-            fi ;;
-    esac
-}
-
-# pick_role: --role wins, else confirm the guess at the terminal (check mode: no prompt)
-pick_role() {
-    local guess ans
-    [[ -n $ROLE ]] && return
-    guess=$(guess_role)
-    if (( CHECK_ONLY ))
-    then
-        ROLE=${guess:-<role>}
-        return
-    fi
-    while :
-    do
-        printf '  %s?%s Inventory role group%s: ' "$c_warn" "$c_reset" "${guess:+ [$guess]}" >&3
-        IFS= read -r ans <&3 || die "no input on the terminal"
-        ans=${ans:-$guess}
-        if [[ -z $ans ]]
-        then
-            warn "a role group is needed for the inventory entry (ecomm, email, splunk, wkst, kali, ...)"
-        elif valid_role "$ans"
-        then
-            ROLE=$ans
-            return
-        else
-            warn "'$ans' is not a valid group name (lowercase letters, digits, underscores; no hyphens)"
-        fi
-    done
-}
-
-
 # ---------------------------------------------------------------- report ----
 
 next_steps() {
@@ -950,9 +896,10 @@ next_steps() {
     [[ ${SSH_PORT:-22} != 22 ]] && port_opt=" ansible_port=$SSH_PORT"
 
     # No colors or prefixes on the YAML itself, so it copies out of the terminal cleanly.
-    # 12/14 spaces = all > children > linux > children > <role> > hosts > <host>
+    # This is a generic host entry; the controller operator chooses the role
+    # group in inventory.yml.
     printf '\n%sInventory entry (YAML)%s paste into inventory.yml under:\n' "$c_bold" "$c_reset"
-    printf '  all > children > linux > children > %s > hosts:\n\n' "${ROLE:-<role>}"
+    printf '  all > children > managed_endpoints > linux > children > <role> > hosts:\n\n'
     printf '            %s:\n' "$yhost"
     printf '              ansible_host: %s\n' "${first:-<ip>}"
     printf '              ansible_user: %s\n' "$ANSIBLE_USER"
@@ -1054,13 +1001,11 @@ main() {
         case $1 in
             -c|--check) CHECK_ONLY=1; shift ;;
             -u|--user)  [[ -n $2 ]] || die "$1 needs a username"; ANSIBLE_USER=$2; shift 2 ;;
-            -r|--role)  [[ -n $2 ]] || die "$1 needs a group name"; ROLE=$2; shift 2 ;;
             -h|--help)  usage; exit 0 ;;
             *)          usage >&2; echo >&2; die "unknown option: $1" ;;
         esac
     done
     [[ $ANSIBLE_USER =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "invalid username: $ANSIBLE_USER"
-    [[ -z $ROLE ]] || valid_role "$ROLE" || die "invalid role group: $ROLE (lowercase letters, digits, underscores; Ansible warns about hyphens)"
     [[ $(id -u) -eq 0 ]] || die "must be run as root (sudo $0)"
 
     TMPD=$(mktemp -d) || die "mktemp failed"
@@ -1083,9 +1028,8 @@ main() {
     detect_pkg
 
     printf '\n%sCCDC stage 0%s: Ansible bootstrap%s\n' "$c_bold" "$c_reset" "$( (( CHECK_ONLY )) && echo " (check only, no changes)")"
-    pick_role
-    printf '%s  host %s  |  %s  |  pkg %s  |  user %s  |  role %s%s\n' "$c_dim" "$(short_host)" "${PRETTY_NAME:-unknown OS}" \
-        "${PKG:-none}" "$ANSIBLE_USER" "$ROLE" "$c_reset"
+    printf '%s  host %s  |  %s  |  pkg %s  |  user %s%s\n' "$c_dim" "$(short_host)" "${PRETTY_NAME:-unknown OS}" \
+        "${PKG:-none}" "$ANSIBLE_USER" "$c_reset"
 
     do_python
     do_user
